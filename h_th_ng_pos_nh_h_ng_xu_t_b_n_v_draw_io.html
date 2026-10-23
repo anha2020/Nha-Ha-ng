@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Nhà Hàng & POS Chấm Công (Draw.io + Web App)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+
+        /* Lưới nền mô phỏng giấy kẻ ô vuông của Draw.io */
+        .drawio-grid-bg {
+            background-color: #ffffff;
+            background-image: 
+                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Khung viền chuẩn phong cách Wireframe Hình 2 trên Draw.io */
+        .wf-container {
+            border: 2px solid #1f2937;
+            background-color: #ffffff;
+            box-shadow: 4px 4px 0px #1f2937;
+        }
+
+        .wf-input, .wf-select {
+            border: 2px solid #1f2937;
+            padding: 7px 12px;
+            font-size: 14px;
+            background-color: #ffffff;
+            color: #111827;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .wf-input:focus, .wf-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Nút bấm viền đôi bo góc giống hệt nút "Lưu", "Sửa", "Xoá" trong Hình 2 */
+        .wf-btn {
+            border: 3px double #1f2937;
+            border-radius: 8px;
+            padding: 6px 18px;
+            font-weight: 700;
+            font-size: 14px;
+            background-color: #ffffff;
+            color: #111827;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .wf-btn:hover {
+            background-color: #f3f4f6;
+            transform: translateY(-1px);
+        }
+
+        .wf-btn:active {
+            transform: translateY(0px);
+        }
+
+        .wf-btn-primary {
+            background-color: #dbeafe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
+        }
+        .wf-btn-primary:hover { background-color: #bfdbfe; }
+
+        .wf-btn-success {
+            background-color: #dcfce7;
+            border-color: #14532d;
+            color: #14532d;
+        }
+        .wf-btn-success:hover { background-color: #bbf7d0; }
+
+        .wf-btn-danger {
+            background-color: #fee2e2;
+            border-color: #7f1d1d;
+            color: #7f1d1d;
+        }
+        .wf-btn-danger:hover { background-color: #fecaca; }
+
+        /* Bảng dữ liệu chuẩn Wireframe Hình 2 (có ô dấu trừ [-] ở tiêu đề cột) */
+        .wf-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #1f2937;
+            background: #ffffff;
+        }
+
+        .wf-table th, .wf-table td {
+            border: 1.5px solid #1f2937;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .wf-table th {
+            background-color: #f9fafb;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .wf-minus-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border: 1px solid #4b5563;
+            background: #f3f4f6;
+            font-size: 11px;
+            line-height: 1;
+            margin-right: 6px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        /* Mũi tên Dropdown tam giác giống Hình 2 */
+        .wf-select-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        .wf-select-wrapper select {
+            width: 100%;
+            appearance: none;
+            padding-right: 40px;
+        }
+        .wf-select-arrow {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            width: 22px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- THÔNG BÁO TOAST (THAY THẾ HOÀN TOÀN ALERT/CONFIRM) -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none px-4"></div>
+
+    <!-- MODAL XÁC NHẬN / XEM HÓA ĐƠN -->
+    <div id="appModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="wf-container max-w-lg w-full p-6 rounded-lg bg-white">
+            <div class="flex justify-between items-center border-b-2 border-gray-800 pb-3 mb-4">
+                <h3 id="modalTitle" class="text-lg font-bold">Thông báo hệ thống</h3>
+                <button onclick="closeModal()" class="text-gray-600 hover:text-black font-bold text-xl px-2">×</button>
+            </div>
+            <div id="modalBody" class="text-sm space-y-3 mb-6"></div>
+            <div id="modalFooter" class="flex justify-end gap-3">
+                <button onclick="closeModal()" class="wf-btn">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- THANH HEADER TỔNG: CHUYỂN ĐỔI WEB THỰC TẾ & BẢN VẼ DRAW.IO -->
+    <header class="bg-gray-900 text-white border-b-2 border-black sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-400 text-black font-extrabold px-3 py-1.5 rounded border-2 border-white text-sm">
+                    POS 30K/H
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight">HỆ THỐNG NHÀ HÀNG & CHẤM CÔNG TÍNH LƯƠNG</h1>
+                    <p class="text-xs text-gray-300">Bám sát Sơ đồ Use Case (UCO1 - UCO11) & Mẫu Form Draw.io</p>
+                </div>
+            </div>
+
+            <!-- Nút chuyển chế độ chính -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="btnModeWeb" onclick="switchMainMode('web')" class="px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-amber-400 text-black border-2 border-white transition">
+                    1. Chạy Web POS Thực Tế
+                </button>
+                <button id="btnModeDrawio" onclick="switchMainMode('drawio')" class="px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-gray-800 text-white border-2 border-gray-500 hover:bg-gray-700 transition">
+                    2. Bản Vẽ Wireframe & Tải File .drawio
+                </button>
+                <button onclick="downloadDrawioFile()" class="px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-emerald-500 text-black border-2 border-white hover:bg-emerald-400 transition">
+                    ⬇ Tải File .drawio (XML)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- THANH TRẠNG THÁI MÁY POS CỬA HÀNG TIỆN LỢI & CẤU HÌNH NHANH (DỄ BẢO TRÌ) -->
+    <section class="max-w-7xl mx-auto px-4 mt-4">
+        <div class="wf-container p-4 rounded-lg bg-amber-50/70">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <!-- Trạng thái nhân viên đứng máy -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-900 text-white rounded">
+                        Máy POS Quầy:
+                    </span>
+                    <div id="posActiveStaffDisplay" class="font-bold text-sm sm:text-base text-red-700 bg-white px-3 py-1.5 border-2 border-gray-800 rounded">
+                        Chưa đăng nhập ca (Hãy chọn nhanh NV bên cạnh hoặc đăng nhập ở Tab 1)
+                    </div>
+                    <span id="posShiftTimeBadge" class="hidden text-xs font-bold px-2.5 py-1.5 bg-emerald-100 text-emerald-900 border-2 border-emerald-800 rounded">
+                        Đang tính ca
+                    </span>
+                </div>
+
+                <!-- Nút chọn nhanh nhân viên để test chấm công / đứng máy không mất công gõ -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs font-semibold text-gray-700 mr-1">Đổi nhanh NV đứng máy:</span>
+                    <button onclick="quickSwitchStaff('NV01')" class="wf-btn text-xs py-1 px-2.5">NV01 (Phục vụ)</button>
+                    <button onclick="quickSwitchStaff('NV02')" class="wf-btn text-xs py-1 px-2.5">NV02 (Bếp)</button>
+                    <button onclick="quickSwitchStaff('NV03')" class="wf-btn text-xs py-1 px-2.5">NV03 (Thu ngân)</button>
+                    <button onclick="quickSwitchStaff('NV04')" class="wf-btn text-xs py-1 px-2.5">NV04 (Quản lý)</button>
+                </div>
+            </div>
+
+            <!-- Thanh cấu hình tham số lương & thưởng (Sửa 1 chỗ áp dụng toàn hệ thống) -->
+            <div class="mt-3 pt-3 border-t border-gray-300 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <span class="font-semibold">Đơn giá 1 giờ công:</span>
+                        <input type="number" id="cfgHourlyRate" value="30000" step="1000" onchange="updateSystemConfig()" class="w-24 border-2 border-gray-800 px-2 py-0.5 font-bold bg-white rounded ml-1"> đ/h
+                    </div>
+                    <div>
+                        <span class="font-semibold">Định mức tháng chuẩn:</span>
+                        <input type="number" id="cfgTargetHours" value="160" step="5" onchange="updateSystemConfig()" class="w-16 border-2 border-gray-800 px-2 py-0.5 font-bold bg-white rounded ml-1"> giờ
+                    </div>
+                    <div>
+                        <span class="font-semibold">Thưởng vượt mốc:</span>
+                        <input type="number" id="cfgBaseBonus" value="300000" step="50000" onchange="updateSystemConfig()" class="w-24 border-2 border-gray-800 px-2 py-0.5 font-bold bg-white rounded ml-1"> đ +
+                        <input type="number" id="cfgExtraHourBonus" value="15000" step="5000" onchange="updateSystemConfig()" class="w-20 border-2 border-gray-800 px-2 py-0.5 font-bold bg-white rounded ml-1"> đ/h vượt
+                    </div>
+                </div>
+                <div class="text-xs text-gray-600 italic">
+                    * Mọi thay đổi thông số tại đây sẽ tự động cập nhật lại toàn bộ bảng lương (Bảo trì 1 chạm).
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- CHẾ ĐỘ 1: ỨNG DỤNG WEB POS & QUẢN LÝ NHÀ HÀNG (CHẠY THỰC TẾ)           -->
+    <!-- ===================================================================== -->
+    <main id="mainWebMode" class="max-w-7xl mx-auto px-4 mt-5">
+        
+        <!-- THANH ĐIỀU HƯỚNG 6 PHÂN HỆ THEO ĐÚNG SƠ ĐỒ HÌNH 1 -->
+        <div class="flex flex-wrap gap-2 mb-5">
+            <button onclick="switchTab('tab-login')" id="tabBtn-tab-login" class="wf-btn wf-btn-primary">
+                1. Đăng nhập & Tính ca (30k/h)
+            </button>
+            <button onclick="switchTab('tab-hall')" id="tabBtn-tab-hall" class="wf-btn">
+                2. Sảnh: UCO1 - UCO3 & UCO6
+            </button>
+            <button onclick="switchTab('tab-kitchen')" id="tabBtn-tab-kitchen" class="wf-btn">
+                3. Bếp: UCO4 - UCO5 <span id="badgeKitchenCount" class="ml-1 px-1.5 py-0.2 bg-red-600 text-white rounded-full text-xs">2</span>
+            </button>
+            <button onclick="switchTab('tab-pos')" id="tabBtn-tab-pos" class="wf-btn">
+                4. Quầy Thu Ngân POS: UC07
+            </button>
+            <button onclick="switchTab('tab-hr')" id="tabBtn-tab-hr" class="wf-btn">
+                5. QL Nhân viên & Lương: UCO8
+            </button>
+            <button onclick="switchTab('tab-admin')" id="tabBtn-tab-admin" class="wf-btn">
+                6. Thực đơn, Kho & Doanh thu: UCO9 - UCO11
+            </button>
+        </div>
+
+        <!-- ================= TAB 1: ĐĂNG NHẬP & CHẤM CÔNG TÍNH CA ================= -->
+        <div id="tab-login" class="tab-panel">
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <div class="max-w-2xl mx-auto mb-4 text-center">
+                    <h2 class="text-xl font-bold uppercase tracking-wide">MÀN HÌNH 1: ĐĂNG NHẬP TÀI KHOẢN & CHẤM CÔNG TÍNH CA</h2>
+                    <p class="text-xs text-gray-600 mt-1">
+                        Mô hình cửa hàng tiện lợi: Nhân viên tới nhập Mã số NV để bắt đầu công, kết thúc công bao nhiêu giờ tính tiền bấy nhiêu (30.000đ/h).
+                    </p>
+                </div>
+
+                <!-- Khung Form bố cục giống hệt Hình 2 Draw.io -->
+                <div class="max-w-xl mx-auto space-y-3 bg-white p-5 border-2 border-gray-800 rounded">
+                    <input type="hidden" id="editShiftIdx" value="-1">
+                    
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Mã nhân viên:</label>
+                        <input type="text" id="authStaffId" value="NV01" placeholder="VD: NV01, NV02, NV03, NV04" class="wf-input w-full sm:w-64 font-bold uppercase" oninput="previewStaffName()">
+                        <span id="authStaffPreview" class="text-xs font-semibold text-blue-700">Nguyễn Văn An (NV phục vụ)</span>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Mật khẩu / Mã PIN:</label>
+                        <input type="password" id="authPin" value="1234" placeholder="Mặc định: 1234" class="wf-input flex-1">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Ca làm việc:</label>
+                        <div class="wf-select-wrapper">
+                            <select id="authShiftType" class="wf-select" onchange="updateShiftDefaultHours()">
+                                <option value="Ca Sáng (06:00 - 14:00)">Ca Sáng (06:00 - 14:00) - 8 giờ</option>
+                                <option value="Ca Chiều (14:00 - 22:00)">Ca Chiều (14:00 - 22:00) - 8 giờ</option>
+                                <option value="Ca Gãy / Part-time (4 giờ)">Ca Gãy / Part-time (17:00 - 21:00) - 4 giờ</option>
+                                <option value="Ca Tăng cường (10 giờ)">Ca Tăng cường (08:00 - 18:00) - 10 giờ</option>
+                            </select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Ngày chấm công:</label>
+                        <div class="relative w-full sm:w-64">
+                            <input type="date" id="authDate" class="wf-input w-full">
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Số giờ công thực tế:</label>
+                        <input type="number" id="authWorkedHours" value="8" min="0.5" max="24" step="0.5" oninput="updateLiveShiftPreview()" class="wf-input w-36 font-bold text-blue-800">
+                        <span id="liveShiftMoneyPreview" class="text-sm font-bold text-emerald-700">
+                            = 240.000 đ (8h × 30.000đ/h)
+                        </span>
+                    </div>
+
+                    <!-- Nút bấm ở giữa chuẩn Wireframe Hình 2 -->
+                    <div class="pt-3 flex flex-wrap justify-center gap-3">
+                        <button onclick="loginAndStartShift()" class="wf-btn wf-btn-primary">
+                            Đăng nhập & Bắt đầu công (Check-in)
+                        </button>
+                        <button onclick="finishShiftAndCalculate()" class="wf-btn wf-btn-success">
+                            Kết thúc công & Lưu tiền ca (Check-out)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng danh sách ca chấm công (Có nút Sửa / Xoá giống Hình 2) -->
+                <div class="mt-7">
+                    <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
+                        <h3 class="font-bold text-sm uppercase">BẢNG LỊCH SỬ CHẤM CÔNG & TÍNH TIỀN THEO CA (30.000Đ / 1 GIỜ)</h3>
+                        <span class="text-xs text-gray-600">Khi lưu ca mới, số giờ sẽ tự động cộng dồn vào Tổng giờ tháng của nhân viên ở UCO8.</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th><span class="wf-minus-box">-</span>Mã nhân viên</th>
+                                    <th><span class="wf-minus-box">-</span>Tên nhân viên</th>
+                                    <th><span class="wf-minus-box">-</span>Ca làm việc / Ngày</th>
+                                    <th><span class="wf-minus-box">-</span>Số giờ công</th>
+                                    <th><span class="wf-minus-box">-</span>Thành tiền ca (30k/h)</th>
+                                    <th class="text-center w-40"><span class="wf-minus-box">-</span>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shiftTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: UCO1/SẢNH (XẾP BÀN, MENU, KHỞI TẠO ĐƠN, MANG MÓN) ================= -->
+        <div id="tab-hall" class="tab-panel hidden">
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <div class="max-w-3xl mx-auto mb-4 text-center">
+                    <h2 class="text-xl font-bold uppercase">MÀN HÌNH 2: PHÂN KHU SẢNH (UCO1: XẾP BÀN → UCO2: MENU → UCO3: KHỞI TẠO ĐƠN → UCO6: MANG MÓN)</h2>
+                    <p class="text-xs text-gray-600 mt-1">Nhấp chọn bàn trực tiếp trên sơ đồ hoặc chọn trong biểu mẫu bên dưới để xếp bàn và gọi món gửi xuống Bếp.</p>
+                </div>
+
+                <!-- Sơ đồ bàn trực quan (UCO1: Xếp bàn) -->
+                <div class="mb-6 bg-white p-4 border-2 border-gray-800 rounded">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="font-bold text-sm">UCO1 - SƠ ĐỒ XẾP BÀN TẠI SẢNH (Nhấn vào bàn để chọn nhanh):</span>
+                        <div class="flex gap-3 text-xs font-semibold">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 inline-block bg-white border border-gray-800"></span> Bàn trống</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 inline-block bg-amber-200 border border-gray-800"></span> Đang có khách / Chờ món</span>
+                        </div>
+                    </div>
+                    <div id="tableMapGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5"></div>
+                </div>
+
+                <!-- Form Khởi tạo đơn (Chuẩn bố cục Hình 2) -->
+                <div class="max-w-xl mx-auto space-y-3 bg-white p-5 border-2 border-gray-800 rounded">
+                    <input type="hidden" id="editOrderIdx" value="-1">
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">UCO1 - Chọn bàn:</label>
+                        <div class="wf-select-wrapper">
+                            <select id="hallTableSelect" class="wf-select">
+                                <option value="Bàn 01">Bàn 01 (Sảnh chính)</option>
+                                <option value="Bàn 02">Bàn 02 (Sảnh chính)</option>
+                                <option value="Bàn 03">Bàn 03 (Gần cửa sổ)</option>
+                                <option value="Bàn 04">Bàn 04 (Phòng lạnh)</option>
+                                <option value="Bàn 05">Bàn 05 (Sân vườn)</option>
+                                <option value="Mang đi (Take-away)">Khách mua mang đi (Quầy)</option>
+                            </select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">UCO2 - Thực đơn (Menu):</label>
+                        <div class="wf-select-wrapper">
+                            <select id="hallDishSelect" class="wf-select"></select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">UCO3 - Số lượng:</label>
+                        <input type="number" id="hallQtyInput" value="1" min="1" max="50" class="wf-input w-36 font-bold">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Ghi chú chế biến:</label>
+                        <input type="text" id="hallNoteInput" placeholder="VD: Ít cay, không hành..." class="wf-input flex-1">
+                    </div>
+
+                    <div class="pt-3 text-center">
+                        <button onclick="saveOrderFromHall()" class="wf-btn wf-btn-primary px-8">
+                            Lưu (Khởi tạo đơn & Chuyển Bếp)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng danh sách món khách gọi tại Sảnh -->
+                <div class="mt-7">
+                    <h3 class="font-bold text-sm uppercase mb-2">DANH SÁCH ĐƠN GỌI MÓN TẠI SẢNH & TRẠNG THÁI MANG MÓN (UCO3, UCO6)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th><span class="wf-minus-box">-</span>Số bàn</th>
+                                    <th><span class="wf-minus-box">-</span>Tên món ăn</th>
+                                    <th><span class="wf-minus-box">-</span>SL</th>
+                                    <th><span class="wf-minus-box">-</span>Thành tiền</th>
+                                    <th><span class="wf-minus-box">-</span>NV Phục vụ</th>
+                                    <th><span class="wf-minus-box">-</span>Trạng thái (Bếp / Sảnh)</th>
+                                    <th class="text-center w-64"><span class="wf-minus-box">-</span>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hallOrderTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: UC4/BẾP (XEM ĐƠN CHẾ BIẾN & CẬP NHẬT HOÀN THÀNH) ================= -->
+        <div id="tab-kitchen" class="tab-panel hidden">
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <div class="max-w-2xl mx-auto mb-4 text-center">
+                    <h2 class="text-xl font-bold uppercase">MÀN HÌNH 3: PHÂN KHU BẾP (UCO4: XEM THỰC ĐƠN CHẾ BIẾN → UCO5: CẬP NHẬT HOÀN THÀNH MÓN)</h2>
+                    <p class="text-xs text-gray-600 mt-1">Nhân viên bếp xem danh sách món từ Sảnh chuyển vào và bấm hoàn thành để báo Sảnh mang món (UCO6).</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="wf-table">
+                        <thead>
+                            <tr>
+                                <th><span class="wf-minus-box">-</span>Bàn</th>
+                                <th><span class="wf-minus-box">-</span>Món cần chế biến (UCO4)</th>
+                                <th><span class="wf-minus-box">-</span>Số lượng</th>
+                                <th><span class="wf-minus-box">-</span>Ghi chú</th>
+                                <th><span class="wf-minus-box">-</span>Trạng thái hiện tại</th>
+                                <th class="text-center w-56"><span class="wf-minus-box">-</span>Thao tác Bếp (UCO5)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kitchenOrderTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: QUẦY THU NGÂN POS (UC07: LẬP & XÁC NHẬN HOÁ ĐƠN) ================= -->
+        <div id="tab-pos" class="tab-panel hidden">
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <div class="max-w-2xl mx-auto mb-4 text-center">
+                    <h2 class="text-xl font-bold uppercase">MÀN HÌNH 4: QUẦY THU NGÂN POS - LẬP & XÁC NHẬN HOÁ ĐƠN (UC07)</h2>
+                    <p class="text-xs text-gray-600 mt-1">Tính tiền kiểu cửa hàng tiện lợi: Tự động gắn Mã số nhân viên đứng máy, tính tiền khách đưa và tiền thừa.</p>
+                </div>
+
+                <div class="max-w-xl mx-auto space-y-3 bg-white p-5 border-2 border-gray-800 rounded">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Mã NV Thu ngân đứng máy:</label>
+                        <input type="text" id="posCashierDisplay" readonly class="wf-input flex-1 bg-gray-100 font-bold">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Chọn bàn thanh toán:</label>
+                        <div class="wf-select-wrapper">
+                            <select id="posTableSelect" class="wf-select font-bold" onchange="recalcPosCheckout()">
+                                <option value="Bàn 01">Bàn 01</option>
+                                <option value="Bàn 02">Bàn 02</option>
+                                <option value="Bàn 03">Bàn 03</option>
+                                <option value="Bàn 04">Bàn 04</option>
+                                <option value="Bàn 05">Bàn 05</option>
+                                <option value="Mang đi (Take-away)">Khách mua mang đi (Quầy)</option>
+                            </select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Chi tiết món của bàn:</label>
+                        <div id="posItemsSummary" class="wf-input flex-1 bg-gray-50 text-xs min-h-[38px] flex items-center"></div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Tổng tiền cần thanh toán:</label>
+                        <input type="text" id="posTotalDisplay" readonly class="wf-input flex-1 font-extrabold text-lg text-red-700 bg-amber-50">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Tiền khách đưa (VNĐ):</label>
+                        <div class="flex-1 space-y-1.5">
+                            <input type="number" id="posCustomerGiven" placeholder="Nhập tiền khách đưa..." oninput="recalcPosChange()" class="wf-input w-full font-bold">
+                            <div class="flex flex-wrap gap-1">
+                                <button type="button" onclick="setQuickCash('exact')" class="wf-btn text-xs py-0.5 px-2">Đủ tiền</button>
+                                <button type="button" onclick="setQuickCash(100000)" class="wf-btn text-xs py-0.5 px-2">100.000đ</button>
+                                <button type="button" onclick="setQuickCash(200000)" class="wf-btn text-xs py-0.5 px-2">200.000đ</button>
+                                <button type="button" onclick="setQuickCash(500000)" class="wf-btn text-xs py-0.5 px-2">500.000đ</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-48 font-bold text-sm">Tiền thừa trả khách:</label>
+                        <input type="text" id="posChangeDisplay" readonly class="wf-input flex-1 font-bold text-emerald-700 bg-gray-50">
+                    </div>
+
+                    <div class="pt-3 text-center">
+                        <button onclick="checkoutTableOrder()" class="wf-btn wf-btn-success px-8">
+                            Lưu (Lập & Xác nhận Hoá đơn - UC07)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danh sách hóa đơn đã lập -->
+                <div class="mt-7">
+                    <h3 class="font-bold text-sm uppercase mb-2">DANH SÁCH HOÁ ĐƠN ĐÃ THANH TOÁN TẠI QUẦY POS (UC07)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th><span class="wf-minus-box">-</span>Mã HĐ</th>
+                                    <th><span class="wf-minus-box">-</span>Bàn</th>
+                                    <th><span class="wf-minus-box">-</span>NV Thu ngân đứng máy</th>
+                                    <th><span class="wf-minus-box">-</span>Thời gian</th>
+                                    <th><span class="wf-minus-box">-</span>Tổng tiền</th>
+                                    <th class="text-center w-44"><span class="wf-minus-box">-</span>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: UCO8 - QUẢN LÝ NHÂN VIÊN & LƯƠNG THƯỞNG HIỆU SUẤT ================= -->
+        <div id="tab-hr" class="tab-panel hidden">
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <div class="max-w-3xl mx-auto mb-4 text-center">
+                    <h2 class="text-xl font-bold uppercase">MÀN HÌNH 5: UCO8 - QUẢN LÝ NHÂN VIÊN & TÍNH LƯƠNG THƯỞNG HIỆU SUẤT (30K/H)</h2>
+                    <p class="text-xs text-gray-600 mt-1">
+                        Thiết kế đồng bộ 100% với bố cục Form & Bảng của Hình 2 trên Draw.io. Tự động tính lương 30.000đ/h + Thưởng hiệu suất khi vượt định mức tháng.
+                    </p>
+                </div>
+
+                <!-- Khung Form 6 trường nhập + Nút Lưu ở giữa giống hệt Hình 2 -->
+                <div class="max-w-xl mx-auto space-y-3 bg-white p-6 border-2 border-gray-800 rounded">
+                    <input type="hidden" id="editStaffIdx" value="-1">
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Mã nhân viên:</label>
+                        <input type="text" id="hrStaffId" placeholder="VD: NV05" class="wf-input w-full sm:w-52 font-bold uppercase">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Tên nhân viên:</label>
+                        <input type="text" id="hrStaffName" placeholder="Nhập họ và tên nhân viên..." class="wf-input flex-1">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Bộ phận / Vai trò:</label>
+                        <div class="wf-select-wrapper">
+                            <select id="hrStaffRole" class="wf-select">
+                                <option value="NV phục vụ">NV phục vụ (Sảnh)</option>
+                                <option value="NV bếp">NV bếp (Chế biến)</option>
+                                <option value="Thu ngân">Thu ngân (Quầy POS)</option>
+                                <option value="Quản lý">Quản lý (Điều hành)</option>
+                            </select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Ca đăng ký chính:</label>
+                        <div class="wf-select-wrapper">
+                            <select id="hrStaffShift" class="wf-select">
+                                <option value="Ca Sáng">Ca Sáng (06:00 - 14:00)</option>
+                                <option value="Ca Chiều">Ca Chiều (14:00 - 22:00)</option>
+                                <option value="Ca Xoay / Toàn thời gian">Ca Xoay / Toàn thời gian</option>
+                            </select>
+                            <svg class="wf-select-arrow" viewBox="0 0 24 18" fill="none">
+                                <polygon points="2,3 22,3 12,15" stroke="#111827" stroke-width="2.2" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Ngày vào làm:</label>
+                        <input type="date" id="hrStartDate" value="2025-01-15" class="wf-input w-full sm:w-52">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="sm:w-44 font-bold text-sm">Tổng giờ công tháng:</label>
+                        <input type="number" id="hrTotalHours" value="165" min="0" step="0.5" class="wf-input flex-1 font-bold">
+                    </div>
+
+                    <div class="pt-3 text-center">
+                        <button onclick="saveStaffRecord()" class="wf-btn px-10">
+                            Lưu
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng nhân viên & tính lương tự động -->
+                <div class="mt-7">
+                    <div class="overflow-x-auto">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th><span class="wf-minus-box">-</span>Mã nhân viên</th>
+                                    <th><span class="wf-minus-box">-</span>Tên nhân viên</th>
+                                    <th><span class="wf-minus-box">-</span>Vai trò</th>
+                                    <th><span class="wf-minus-box">-</span>Tổng giờ tháng</th>
+                                    <th><span class="wf-minus-box">-</span>Lương công (30k/h)</th>
+                                    <th><span class="wf-minus-box">-</span>Thưởng hiệu suất</th>
+                                    <th><span class="wf-minus-box">-</span>Tổng thực nhận</th>
+                                    <th class="text-center w-40"><span class="wf-minus-box">-</span>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hrStaffTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: QUẢN TRỊ SONG SONG (UCO9, UCO10, UCO11) ================= -->
+        <div id="tab-admin" class="tab-panel hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- UCO9: QL Thực đơn hàng ngày -->
+                <div class="wf-container drawio-grid-bg p-5 rounded-lg">
+                    <h3 class="text-base font-bold uppercase text-center mb-4">UCO9: QUẢN LÝ THỰC ĐƠN HÀNG NGÀY</h3>
+                    <div class="space-y-2.5 bg-white p-4 border-2 border-gray-800 rounded mb-4">
+                        <input type="hidden" id="editMenuIdx" value="-1">
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Mã món:</label>
+                            <input type="text" id="menuCodeInput" placeholder="VD: M05" class="wf-input flex-1 uppercase">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Tên món ăn:</label>
+                            <input type="text" id="menuNameInput" placeholder="VD: Bò lúc lắc" class="wf-input flex-1">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Đơn giá (VNĐ):</label>
+                            <input type="number" id="menuPriceInput" placeholder="VD: 65000" class="wf-input flex-1">
+                        </div>
+                        <div class="text-center pt-2">
+                            <button onclick="saveMenuRecord()" class="wf-btn px-8">Lưu</button>
+                        </div>
+                    </div>
+                    <table class="wf-table">
+                        <thead>
+                            <tr>
+                                <th><span class="wf-minus-box">-</span>Mã món</th>
+                                <th><span class="wf-minus-box">-</span>Tên món</th>
+                                <th><span class="wf-minus-box">-</span>Đơn giá</th>
+                                <th class="text-center w-36"><span class="wf-minus-box">-</span>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminMenuTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- UCO10: QL Nguyên liệu -->
+                <div class="wf-container drawio-grid-bg p-5 rounded-lg">
+                    <h3 class="text-base font-bold uppercase text-center mb-4">UCO10: QUẢN LÝ NGUYÊN LIỆU NHÀ BẾP</h3>
+                    <div class="space-y-2.5 bg-white p-4 border-2 border-gray-800 rounded mb-4">
+                        <input type="hidden" id="editIngIdx" value="-1">
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Mã NL:</label>
+                            <input type="text" id="ingCodeInput" placeholder="VD: NL04" class="wf-input flex-1 uppercase">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Tên nguyên liệu:</label>
+                            <input type="text" id="ingNameInput" placeholder="VD: Thịt bò thăn (kg)" class="wf-input flex-1">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-32 font-bold text-sm">Tồn kho:</label>
+                            <input type="number" id="ingQtyInput" placeholder="VD: 30" class="wf-input flex-1">
+                        </div>
+                        <div class="text-center pt-2">
+                            <button onclick="saveIngRecord()" class="wf-btn px-8">Lưu</button>
+                        </div>
+                    </div>
+                    <table class="wf-table">
+                        <thead>
+                            <tr>
+                                <th><span class="wf-minus-box">-</span>Mã NL</th>
+                                <th><span class="wf-minus-box">-</span>Tên nguyên liệu</th>
+                                <th><span class="wf-minus-box">-</span>Số lượng tồn</th>
+                                <th class="text-center w-36"><span class="wf-minus-box">-</span>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminIngTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- UCO11: QL Doanh thu & Quỹ lương -->
+            <div class="wf-container drawio-grid-bg p-6 rounded-lg">
+                <h3 class="text-lg font-bold uppercase text-center mb-4">UCO11: QUẢN LÝ DOANH THU, QUỸ LƯƠNG NHÂN VIÊN & LỢI NHUẬN</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white border-2 border-gray-800 p-4 rounded text-center">
+                        <div class="text-xs font-bold text-gray-500 uppercase">Tổng số hóa đơn (UC07)</div>
+                        <div id="statInvoiceCount" class="text-2xl font-extrabold mt-1">0</div>
+                    </div>
+                    <div class="bg-white border-2 border-gray-800 p-4 rounded text-center">
+                        <div class="text-xs font-bold text-gray-500 uppercase">Tổng doanh thu bán hàng</div>
+                        <div id="statTotalRevenue" class="text-2xl font-extrabold text-emerald-700 mt-1">0 đ</div>
+                    </div>
+                    <div class="bg-white border-2 border-gray-800 p-4 rounded text-center">
+                        <div class="text-xs font-bold text-gray-500 uppercase">Tổng quỹ lương + thưởng (UCO8)</div>
+                        <div id="statTotalPayroll" class="text-2xl font-extrabold text-red-700 mt-1">0 đ</div>
+                    </div>
+                    <div class="bg-white border-2 border-gray-800 p-4 rounded text-center">
+                        <div class="text-xs font-bold text-gray-500 uppercase">Chênh lệch Doanh thu - Lương</div>
+                        <div id="statNetBalance" class="text-2xl font-extrabold text-blue-800 mt-1">0 đ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- CHẾ ĐỘ 2: BẢN VẼ WIREFRAME DRAW.IO & TRÌNH XUẤT FILE .DRAWIO (XML)    -->
+    <!-- ===================================================================== -->
+    <section id="mainDrawioMode" class="max-w-7xl mx-auto px-4 mt-5 hidden">
+        <div class="wf-container p-6 rounded-lg bg-white space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-gray-800 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold uppercase">TRÌNH XEM WIREFRAME & XUẤT FILE BẢN VẼ DRAW.IO (.DRAWIO XML)</h2>
+                    <p class="text-sm text-gray-600 mt-1">
+                        File <code>.drawio</code> bên dưới chứa sẵn <strong>2 Trang bản vẽ hoàn chỉnh</strong> (Trang 1: Sơ đồ Use Case luồng Nhà hàng + Tính ca; Trang 2: Bộ 4 màn hình Wireframe chuẩn mẫu Hình 2). Bạn chỉ cần tải về và mở trên <strong>app.diagrams.net</strong>.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="downloadDrawioFile()" class="wf-btn wf-btn-success">
+                        ⬇ Tải file He_Thong_POS_Nha_Hang.drawio
+                    </button>
+                    <button onclick="copyDrawioXml()" class="wf-btn wf-btn-primary">
+                        📋 Copy mã XML Draw.io
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bản vẽ SVG mô phỏng trực tiếp khung Draw.io ngay trên trình duyệt -->
+            <div>
+                <h3 class="font-bold text-sm uppercase mb-3">XEM TRƯỚC BẢN VẼ WIREFRAME TRÊN DRAW.IO (ĐỒNG BỘ HÌNH 1 & HÌNH 2 CỦA BẠN):</h3>
+                <div class="drawio-grid-bg border-2 border-gray-800 p-4 rounded overflow-x-auto">
+                    <svg viewBox="0 0 1100 540" class="w-full min-w-[900px] h-auto">
+                        <!-- Khung Màn hình A: Đăng nhập POS & Chấm công 30k/h -->
+                        <rect x="20" y="20" width="510" height="500" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+                        <text x="275" y="52" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">WIREFRAME 1: ĐĂNG NHẬP POS &amp; CHẤM CÔNG TÍNH CA (30K/H)</text>
+                        
+                        <text x="65" y="95" font-size="13" fill="#000">Mã nhân viên:</text>
+                        <rect x="190" y="75" width="160" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="200" y="95" font-size="12" fill="#333">NV01 (Quét/Nhập)</text>
+
+                        <text x="65" y="140" font-size="13" fill="#000">Mật khẩu / PIN:</text>
+                        <rect x="190" y="120" width="290" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="200" y="140" font-size="12" fill="#333">****</text>
+
+                        <text x="65" y="185" font-size="13" fill="#000">Ca làm việc:</text>
+                        <rect x="190" y="165" width="290" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <polygon points="445,172 470,172 457.5,188" fill="#fff" stroke="#000" stroke-width="1.8"/>
+
+                        <text x="65" y="230" font-size="13" fill="#000">Ngày chấm công:</text>
+                        <rect x="190" y="210" width="160" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <rect x="315" y="215" width="24" height="20" fill="#fff" stroke="#000" stroke-width="1.2"/>
+
+                        <text x="65" y="275" font-size="13" fill="#000">Giờ công (×30k/h):</text>
+                        <rect x="190" y="255" width="290" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="200" y="275" font-size="12" fill="#15803d" font-weight="bold">8 giờ = 240.000 VNĐ</text>
+
+                        <!-- Nút bấm viền đôi chuẩn Hình 2 -->
+                        <rect x="135" y="305" width="130" height="38" rx="6" fill="#fff" stroke="#000" stroke-width="2"/>
+                        <rect x="139" y="309" width="122" height="30" rx="4" fill="#fff" stroke="#000" stroke-width="1"/>
+                        <text x="200" y="329" text-anchor="middle" font-size="13" font-weight="bold">Bắt đầu ca</text>
+
+                        <rect x="285" y="305" width="130" height="38" rx="6" fill="#fff" stroke="#000" stroke-width="2"/>
+                        <rect x="289" y="309" width="122" height="30" rx="4" fill="#fff" stroke="#000" stroke-width="1"/>
+                        <text x="350" y="329" text-anchor="middle" font-size="13" font-weight="bold">Kết thúc ca</text>
+
+                        <!-- Bảng bên dưới -->
+                        <rect x="45" y="365" width="460" height="130" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <line x1="45" y1="395" x2="505" y2="395" stroke="#000" stroke-width="1.5"/>
+                        <line x1="45" y1="445" x2="505" y2="445" stroke="#000" stroke-width="1.5"/>
+                        <line x1="150" y1="365" x2="150" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <line x1="280" y1="365" x2="280" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <line x1="395" y1="365" x2="395" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <text x="98" y="385" text-anchor="middle" font-size="12" font-weight="bold">Mã NV</text>
+                        <text x="215" y="385" text-anchor="middle" font-size="12" font-weight="bold">Giờ công</text>
+                        <text x="338" y="385" text-anchor="middle" font-size="12" font-weight="bold">Thành tiền</text>
+                        <text x="450" y="385" text-anchor="middle" font-size="12" font-weight="bold">Thao tác</text>
+                        <text x="98" y="425" text-anchor="middle" font-size="12">NV01</text>
+                        <text x="215" y="425" text-anchor="middle" font-size="12">8 giờ</text>
+                        <text x="338" y="425" text-anchor="middle" font-size="12">240.000đ</text>
+                        <rect x="405" y="405" width="42" height="28" rx="4" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="426" y="423" text-anchor="middle" font-size="11" font-weight="bold">Sửa</text>
+                        <rect x="453" y="405" width="42" height="28" rx="4" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="474" y="423" text-anchor="middle" font-size="11" font-weight="bold">Xoá</text>
+
+                        <!-- Khung Màn hình B: UCO8 Quản lý Nhân viên & Thưởng Hiệu Suất (Chuẩn Hình 2) -->
+                        <rect x="560" y="20" width="520" height="500" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+                        <text x="820" y="52" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">WIREFRAME 2: UCO8 - QL NHÂN VIÊN &amp; THƯỞNG HIỆU SUẤT</text>
+
+                        <text x="605" y="95" font-size="13" fill="#000">Mã nhân viên:</text>
+                        <rect x="735" y="75" width="160" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+
+                        <text x="605" y="140" font-size="13" fill="#000">Tên nhân viên:</text>
+                        <rect x="735" y="120" width="300" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+
+                        <text x="605" y="185" font-size="13" fill="#000">Vai trò:</text>
+                        <rect x="735" y="165" width="300" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <polygon points="995,172 1020,172 1007.5,188" fill="#fff" stroke="#000" stroke-width="1.8"/>
+
+                        <text x="605" y="230" font-size="13" fill="#000">Ca đăng ký:</text>
+                        <rect x="735" y="210" width="300" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <polygon points="995,217 1020,217 1007.5,233" fill="#fff" stroke="#000" stroke-width="1.8"/>
+
+                        <text x="605" y="275" font-size="13" fill="#000">Tổng giờ tháng:</text>
+                        <rect x="735" y="255" width="300" height="30" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="745" y="275" font-size="12" fill="#333">175h (&gt;160h: +Thưởng hiệu suất)</text>
+
+                        <!-- Nút Lưu chuẩn Hình 2 -->
+                        <rect x="775" y="305" width="90" height="38" rx="6" fill="#fff" stroke="#000" stroke-width="2"/>
+                        <rect x="779" y="309" width="82" height="30" rx="4" fill="#fff" stroke="#000" stroke-width="1"/>
+                        <text x="820" y="329" text-anchor="middle" font-size="13" font-weight="bold">Lưu</text>
+
+                        <!-- Bảng dưới chuẩn Hình 2 -->
+                        <rect x="585" y="365" width="470" height="130" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <line x1="585" y1="395" x2="1055" y2="395" stroke="#000" stroke-width="1.5"/>
+                        <line x1="585" y1="445" x2="1055" y2="445" stroke="#000" stroke-width="1.5"/>
+                        <line x1="685" y1="365" x2="685" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <line x1="825" y1="365" x2="825" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <line x1="945" y1="365" x2="945" y2="495" stroke="#000" stroke-width="1.5"/>
+                        <text x="635" y="385" text-anchor="middle" font-size="12" font-weight="bold">Mã NV</text>
+                        <text x="755" y="385" text-anchor="middle" font-size="12" font-weight="bold">Tên nhân viên</text>
+                        <text x="885" y="385" text-anchor="middle" font-size="12" font-weight="bold">Tổng lương</text>
+                        <text x="1000" y="385" text-anchor="middle" font-size="12" font-weight="bold">Thao tác</text>
+                        <text x="635" y="425" text-anchor="middle" font-size="12">NV03</text>
+                        <text x="755" y="425" text-anchor="middle" font-size="12">Lê Hoàng Cường</text>
+                        <text x="885" y="425" text-anchor="middle" font-size="12" font-weight="bold">5.775.000đ</text>
+                        <rect x="955" y="405" width="42" height="28" rx="4" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="976" y="423" text-anchor="middle" font-size="11" font-weight="bold">Sửa</text>
+                        <rect x="1003" y="405" width="42" height="28" rx="4" fill="#fff" stroke="#000" stroke-width="1.5"/>
+                        <text x="1024" y="423" text-anchor="middle" font-size="11" font-weight="bold">Xoá</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Khung mã XML Draw.io để người dùng kiểm tra hoặc copy -->
+            <div>
+                <label class="block font-bold text-sm mb-2">MÃ NGUỒN FILE .DRAWIO (XML CHUẨN MXFILE CỦA APP.DIAGRAMS.NET):</label>
+                <textarea id="drawioXmlTextarea" readonly rows="8" class="wf-input w-full font-mono text-xs bg-gray-50"></textarea>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        /**
+         * =========================================================================
+         * KHỐI 1: CẤU HÌNH TRUNG TÂM (DỄ HIỂU - BẢO TRÌ KHÔNG MẤT CÔNG)
+         * Chỉ cần sửa thông số ở đây, toàn bộ hệ thống tự động tính toán lại.
+         * =========================================================================
+         */
+        const APP_CONFIG = {
+            HOURLY_RATE: 30000,         // 1 giờ công = 30.000 VNĐ
+            TARGET_MONTHLY_HOURS: 160,  // Định mức chuẩn trong tháng: 160 giờ
+            MILESTONE_BONUS: 300000,    // Thưởng mốc ngay khi vượt 160 giờ: 300.000 VNĐ
+            EXTRA_HOUR_BONUS: 15000     // Thưởng hiệu suất mỗi giờ làm vượt: +15.000 VNĐ/giờ
+        };
+
+        /**
+         * =========================================================================
+         * KHỐI 2: DỮ LIỆU KHỞI TẠO MẪU (ĐẦY ĐỦ 4 VAI TRÒ TRONG SƠ ĐỒ HÌNH 1)
+         * =========================================================================
+         */
+        let staffData = [
+            { id: "NV01", name: "Nguyễn Văn An", role: "NV phục vụ", shift: "Ca Sáng", startDate: "2025-01-10", hours: 168, pin: "1234" },
+            { id: "NV02", name: "Trần Thị Bình", role: "NV bếp", shift: "Ca Sáng", startDate: "2025-02-01", hours: 172, pin: "1234" },
+            { id: "NV03", name: "Lê Hoàng Cường", role: "Thu ngân", shift: "Ca Chiều", startDate: "2025-01-15", hours: 180, pin: "1234" },
+            { id: "NV04", name: "Phạm Minh Đức", role: "Quản lý", shift: "Ca Xoay / Toàn thời gian", startDate: "2024-11-20", hours: 160, pin: "1234" }
+        ];
+
+        // Nhân viên đang đăng nhập đứng máy POS (Mặc định đăng nhập sẵn NV03 để dễ trải nghiệm)
+        let currentPosStaff = staffData[2];
+
+        // Lịch sử chấm công theo ca
+        let shiftLogs = [
+            { staffId: "NV01", staffName: "Nguyễn Văn An", shiftType: "Ca Sáng (06:00 - 14:00)", date: "2025-05-10", hours: 8 },
+            { staffId: "NV02", staffName: "Trần Thị Bình", shiftType: "Ca Sáng (06:00 - 14:00)", date: "2025-05-10", hours: 8 },
+            { staffId: "NV03", staffName: "Lê Hoàng Cường", shiftType: "Ca Tăng cường (10 giờ)", date: "2025-05-10", hours: 10 }
+        ];
+
+        // Danh sách thực đơn (UCO2 & UCO9)
+        let menuData = [
+            { code: "M01", name: "Cơm tấm sườn bì chả", price: 55000 },
+            { code: "M02", name: "Phở bò tái nạm đặc biệt", price: 65000 },
+            { code: "M03", name: "Lẩu thái hải sản (Nhỏ)", price: 185000 },
+            { code: "M04", name: "Gỏi cuốn tôm thịt (Phần)", price: 40000 },
+            { code: "M05", name: "Trà đào cam sả", price: 30000 }
+        ];
+
+        // Danh sách nguyên liệu tồn kho (UCO10)
+        let ingredientData = [
+            { code: "NL01", name: "Gạo tấm thơm (kg)", qty: 45 },
+            { code: "NL02", name: "Thịt sườn heo tươi (kg)", qty: 18 },
+            { code: "NL03", name: "Tôm sú tươi (kg)", qty: 10 },
+            { code: "NL04", name: "Cam sả & Trà túi lọc (Hộp)", qty: 24 }
+        ];
+
+        // Danh sách bàn tại Sảnh (UCO1)
+        const tableNames = ["Bàn 01", "Bàn 02", "Bàn 03", "Bàn 04", "Bàn 05", "Mang đi (Take-away)"];
+
+        // Danh sách món đang gọi (UCO3 -> UCO4 -> UCO5 -> UCO6)
+        let activeOrders = [
+            { id: 1001, table: "Bàn 01", dishCode: "M01", dishName: "Cơm tấm sườn bì chả", qty: 2, price: 55000, note: "Thêm mỡ hành", staffId: "NV01", status: "Chờ Bếp chế biến (UCO4)" },
+            { id: 1002, table: "Bàn 01", dishCode: "M05", dishName: "Trà đào cam sả", qty: 2, price: 30000, note: "Ít đá", staffId: "NV01", status: "Bếp đã hoàn thành (UCO5)" },
+            { id: 1003, table: "Bàn 02", dishCode: "M03", dishName: "Lẩu thái hải sản (Nhỏ)", qty: 1, price: 185000, note: "Cay vừa", staffId: "NV01", status: "Đã mang ra bàn (UCO6)" }
+        ];
+
+        // Danh sách hóa đơn đã thu tiền tại Quầy (UC07 & UCO11)
+        let invoiceData = [
+            { invId: "HD101", table: "Bàn 03", cashier: "NV03 - Lê Hoàng Cường", time: "11:45", total: 245000, given: 300000, change: 55000 },
+            { invId: "HD102", table: "Mang đi (Take-away)", cashier: "NV03 - Lê Hoàng Cường", time: "12:15", total: 110000, given: 110000, change: 0 }
+        ];
+
+        /**
+         * =========================================================================
+         * KHỐI 3: HÀM TÍNH LƯƠNG & THƯỞNG HIỆU SUẤT (TÁCH BIỆT RÕ RÀNG)
+         * =========================================================================
+         */
+        function calculateMonthlySalary(totalHours) {
+            const baseSalary = totalHours * APP_CONFIG.HOURLY_RATE;
+            let performanceBonus = 0;
+            let extraHours = 0;
+
+            if (totalHours > APP_CONFIG.TARGET_MONTHLY_HOURS) {
+                extraHours = totalHours - APP_CONFIG.TARGET_MONTHLY_HOURS;
+                performanceBonus = APP_CONFIG.MILESTONE_BONUS + (extraHours * APP_CONFIG.EXTRA_HOUR_BONUS);
+            }
+
+            return {
+                baseSalary,
+                extraHours,
+                performanceBonus,
+                totalPay: baseSalary + performanceBonus
+            };
+        }
+
+        function formatMoney(amount) {
+            return Number(amount || 0).toLocaleString('vi-VN') + ' đ';
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 4: HỆ THỐNG THÔNG BÁO TOAST & MODAL (KHÔNG DÙNG ALERT/CONFIRM)
+         * =========================================================================
+         */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgMap = {
+                success: 'bg-emerald-100 border-emerald-900 text-emerald-950',
+                info: 'bg-blue-100 border-blue-900 text-blue-950',
+                error: 'bg-red-100 border-red-900 text-red-950'
+            };
+            toast.className = `pointer-events-auto border-2 ${bgMap[type] || bgMap.info} px-4 py-3 rounded shadow-lg text-sm font-semibold flex justify-between items-center transition-all`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3500);
+        }
+
+        function openModal(title, htmlContent) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = htmlContent;
+            const modal = document.getElementById('appModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('appModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 5: XỬ LÝ ĐĂNG NHẬP POS & CHẤM CÔNG TÍNH CA (TAB 1)
+         * =========================================================================
+         */
+        function updateSystemConfig() {
+            APP_CONFIG.HOURLY_RATE = parseFloat(document.getElementById('cfgHourlyRate').value) || 30000;
+            APP_CONFIG.TARGET_MONTHLY_HOURS = parseFloat(document.getElementById('cfgTargetHours').value) || 160;
+            APP_CONFIG.MILESTONE_BONUS = parseFloat(document.getElementById('cfgBaseBonus').value) || 300000;
+            APP_CONFIG.EXTRA_HOUR_BONUS = parseFloat(document.getElementById('cfgExtraHourBonus').value) || 15000;
+            updateLiveShiftPreview();
+            renderAll();
+            showToast(`Đã cập nhật cấu hình: ${formatMoney(APP_CONFIG.HOURLY_RATE)}/giờ, định mức ${APP_CONFIG.TARGET_MONTHLY_HOURS}h/tháng.`, 'info');
+        }
+
+        function previewStaffName() {
+            const idInput = document.getElementById('authStaffId').value.trim().toUpperCase();
+            const found = staffData.find(s => s.id === idInput);
+            const previewEl = document.getElementById('authStaffPreview');
+            if (found) {
+                previewEl.innerText = `${found.name} (${found.role} - Đã tích lũy ${found.hours}h tháng này)`;
+                previewEl.className = "text-xs font-bold text-blue-700";
+            } else {
+                previewEl.innerText = "Mã NV mới hoặc chưa có trong danh sách (Gợi ý: NV01, NV02, NV03, NV04)";
+                previewEl.className = "text-xs font-semibold text-amber-700";
+            }
+        }
+
+        function updateShiftDefaultHours() {
+            const shiftType = document.getElementById('authShiftType').value;
+            let hours = 8;
+            if (shiftType.includes('4 giờ')) hours = 4;
+            if (shiftType.includes('10 giờ')) hours = 10;
+            document.getElementById('authWorkedHours').value = hours;
+            updateLiveShiftPreview();
+        }
+
+        function updateLiveShiftPreview() {
+            const h = parseFloat(document.getElementById('authWorkedHours').value) || 0;
+            const money = h * APP_CONFIG.HOURLY_RATE;
+            document.getElementById('liveShiftMoneyPreview').innerText = `= ${formatMoney(money)} (${h}h × ${formatMoney(APP_CONFIG.HOURLY_RATE)}/h)`;
+        }
+
+        function quickSwitchStaff(staffId) {
+            const found = staffData.find(s => s.id === staffId);
+            if (!found) return;
+            currentPosStaff = found;
+            document.getElementById('authStaffId').value = found.id;
+            previewStaffName();
+            renderAll();
+            showToast(`Đã chuyển người đứng máy POS sang: ${found.id} - ${found.name} (${found.role})`, 'info');
+        }
+
+        function loginAndStartShift() {
+            const staffId = document.getElementById('authStaffId').value.trim().toUpperCase();
+            const found = staffData.find(s => s.id === staffId);
+            if (!found) {
+                showToast("Không tìm thấy Mã nhân viên! Hãy chọn NV01, NV02, NV03 hoặc NV04.", 'error');
+                return;
+            }
+            currentPosStaff = found;
+            const badge = document.getElementById('posShiftTimeBadge');
+            badge.classList.remove('hidden');
+            badge.innerText = `Đang trong ca (${new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})})`;
+            renderAll();
+            showToast(`Đăng nhập POS & Bắt đầu ca thành công: ${found.id} - ${found.name}`, 'success');
+        }
+
+        function finishShiftAndCalculate() {
+            const staffId = document.getElementById('authStaffId').value.trim().toUpperCase();
+            const shiftType = document.getElementById('authShiftType').value;
+            const date = document.getElementById('authDate').value || new Date().toISOString().slice(0, 10);
+            const hours = parseFloat(document.getElementById('authWorkedHours').value) || 0;
+            const editIdx = parseInt(document.getElementById('editShiftIdx').value);
+
+            let staff = staffData.find(s => s.id === staffId);
+            if (!staff) {
+                showToast("Mã nhân viên không tồn tại! Hãy nhập NV01, NV02, NV03 hoặc NV04.", 'error');
+                return;
+            }
+
+            if (editIdx >= 0) {
+                // Cập nhật lại số giờ chênh lệch vào tổng tháng
+                const oldHours = shiftLogs[editIdx].hours;
+                staff.hours = Math.max(0, staff.hours - oldHours + hours);
+                shiftLogs[editIdx] = { staffId: staff.id, staffName: staff.name, shiftType, date, hours };
+                document.getElementById('editShiftIdx').value = "-1";
+                showToast(`Đã cập nhật lại ca làm việc của ${staff.name}!`, 'info');
+            } else {
+                currentPosStaff = staff;
+                staff.hours += hours;
+                shiftLogs.unshift({ staffId: staff.id, staffName: staff.name, shiftType, date, hours });
+                const sal = calculateMonthlySalary(staff.hours);
+                const shiftPay = hours * APP_CONFIG.HOURLY_RATE;
+
+                openModal(
+                    "PHIẾU KẾT THÚC CÔNG & TÍNH TIỀN CA (POS)",
+                    `<div class="space-y-2 border-2 border-gray-800 p-4 rounded bg-amber-50/50">
+                        <div><strong>Mã nhân viên:</strong> ${staff.id} - ${staff.name} (${staff.role})</div>
+                        <div><strong>Ca làm việc:</strong> ${shiftType} (${date})</div>
+                        <div><strong>Số giờ công ca này:</strong> ${hours} giờ × ${formatMoney(APP_CONFIG.HOURLY_RATE)}/h = <span class="font-bold text-emerald-700">${formatMoney(shiftPay)}</span></div>
+                        <hr class="border-gray-400">
+                        <div><strong>Tổng giờ tích lũy trong tháng:</strong> ${staff.hours} giờ (Định mức: ${APP_CONFIG.TARGET_MONTHLY_HOURS} giờ)</div>
+                        <div><strong>Thưởng hiệu suất vượt định mức:</strong> <span class="font-bold text-blue-700">${sal.performanceBonus > 0 ? '+ ' + formatMoney(sal.performanceBonus) : '0 đ (Chưa vượt định mức)'}</span></div>
+                        <div class="text-base font-extrabold pt-1">Tổng lương tháng tạm tính: <span class="text-red-700">${formatMoney(sal.totalPay)}</span></div>
+                    </div>`
+                );
+            }
+            renderAll();
+        }
+
+        function editShiftLog(index) {
+            const item = shiftLogs[index];
+            document.getElementById('editShiftIdx').value = index;
+            document.getElementById('authStaffId').value = item.staffId;
+            document.getElementById('authShiftType').value = item.shiftType;
+            document.getElementById('authDate').value = item.date;
+            document.getElementById('authWorkedHours').value = item.hours;
+            previewStaffName();
+            updateLiveShiftPreview();
+            showToast(`Đang nạp dữ liệu ca của ${item.staffName} lên biểu mẫu để sửa.`, 'info');
+        }
+
+        function deleteShiftLog(index) {
+            const item = shiftLogs[index];
+            const staff = staffData.find(s => s.id === item.staffId);
+            if (staff) {
+                staff.hours = Math.max(0, staff.hours - item.hours);
+            }
+            shiftLogs.splice(index, 1);
+            renderAll();
+            showToast("Đã xoá bản ghi chấm công ca và trừ lại giờ lũy kế.", 'info');
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 6: NGHIỆP VỤ SẢNH - BẾP - THU NGÂN (UCO1 -> UC07)
+         * =========================================================================
+         */
+        function selectTableOnMap(tableName) {
+            document.getElementById('hallTableSelect').value = tableName;
+            document.getElementById('posTableSelect').value = tableName;
+            renderAll();
+            showToast(`UCO1 - Đã chọn ${tableName}`, 'info');
+        }
+
+        function saveOrderFromHall() {
+            const table = document.getElementById('hallTableSelect').value;
+            const dishCode = document.getElementById('hallDishSelect').value;
+            const qty = parseInt(document.getElementById('hallQtyInput').value) || 1;
+            const note = document.getElementById('hallNoteInput').value.trim() || "Không";
+            const editIdx = parseInt(document.getElementById('editOrderIdx').value);
+
+            const dish = menuData.find(m => m.code === dishCode);
+            if (!dish) return;
+
+            const staffCode = currentPosStaff ? currentPosStaff.id : "NV01";
+
+            if (editIdx >= 0) {
+                activeOrders[editIdx] = {
+                    ...activeOrders[editIdx],
+                    table,
+                    dishCode: dish.code,
+                    dishName: dish.name,
+                    qty,
+                    price: dish.price,
+                    note
+                };
+                document.getElementById('editOrderIdx').value = "-1";
+                showToast(`Đã cập nhật món ${dish.name} cho ${table}`, 'info');
+            } else {
+                activeOrders.push({
+                    id: Date.now(),
+                    table,
+                    dishCode: dish.code,
+                    dishName: dish.name,
+                    qty,
+                    price: dish.price,
+                    note,
+                    staffId: staffCode,
+                    status: "Chờ Bếp chế biến (UCO4)"
+                });
+                showToast(`UCO3 - Đã khởi tạo đơn "${dish.name} (x${qty})" tại ${table} và chuyển xuống Bếp!`, 'success');
+            }
+
+            document.getElementById('hallQtyInput').value = 1;
+            document.getElementById('hallNoteInput').value = "";
+            renderAll();
+        }
+
+        function editOrderFromHall(index) {
+            const o = activeOrders[index];
+            document.getElementById('editOrderIdx').value = index;
+            document.getElementById('hallTableSelect').value = o.table;
+            document.getElementById('hallDishSelect').value = o.dishCode;
+            document.getElementById('hallQtyInput').value = o.qty;
+            document.getElementById('hallNoteInput').value = o.note;
+            showToast(`Đang sửa món "${o.dishName}" của ${o.table}`, 'info');
+        }
+
+        function deleteOrderFromHall(index) {
+            activeOrders.splice(index, 1);
+            renderAll();
+            showToast("Đã xoá món khỏi đơn hàng.", 'info');
+        }
+
+        function kitchenCompleteDish(index) {
+            activeOrders[index].status = "Bếp đã hoàn thành (UCO5)";
+            renderAll();
+            showToast(`UCO5 - Bếp đã nấu xong món "${activeOrders[index].dishName}" cho ${activeOrders[index].table}!`, 'success');
+        }
+
+        function hallServeDish(index) {
+            activeOrders[index].status = "Đã mang ra bàn (UCO6)";
+            renderAll();
+            showToast(`UCO6 - Nhân viên đã mang món "${activeOrders[index].dishName}" ra ${activeOrders[index].table}!`, 'success');
+        }
+
+        function recalcPosCheckout() {
+            const selectedTable = document.getElementById('posTableSelect').value;
+            const items = activeOrders.filter(o => o.table === selectedTable);
+            const total = items.reduce((sum, o) => sum + (o.price * o.qty), 0);
+
+            const summaryEl = document.getElementById('posItemsSummary');
+            if (items.length === 0) {
+                summaryEl.innerText = "Bàn này hiện chưa có món ăn nào chờ thanh toán.";
+            } else {
+                summaryEl.innerText = items.map(i => `${i.dishName} (x${i.qty})`).join(', ');
+            }
+
+            const totalInput = document.getElementById('posTotalDisplay');
+            totalInput.value = formatMoney(total);
+            totalInput.dataset.rawTotal = total;
+            recalcPosChange();
+        }
+
+        function setQuickCash(val) {
+            const rawTotal = parseFloat(document.getElementById('posTotalDisplay').dataset.rawTotal || 0);
+            const cashInput = document.getElementById('posCustomerGiven');
+            cashInput.value = val === 'exact' ? rawTotal : val;
+            recalcPosChange();
+        }
+
+        function recalcPosChange() {
+            const rawTotal = parseFloat(document.getElementById('posTotalDisplay').dataset.rawTotal || 0);
+            const given = parseFloat(document.getElementById('posCustomerGiven').value || 0);
+            const changeEl = document.getElementById('posChangeDisplay');
+
+            if (rawTotal === 0) {
+                changeEl.value = "0 đ";
+                return;
+            }
+            if (given < rawTotal) {
+                changeEl.value = `Còn thiếu ${formatMoney(rawTotal - given)}`;
+            } else {
+                changeEl.value = formatMoney(given - rawTotal);
+            }
+        }
+
+        function checkoutTableOrder() {
+            const selectedTable = document.getElementById('posTableSelect').value;
+            const rawTotal = parseFloat(document.getElementById('posTotalDisplay').dataset.rawTotal || 0);
+            const given = parseFloat(document.getElementById('posCustomerGiven').value || rawTotal);
+
+            if (rawTotal <= 0) {
+                showToast(`Bàn "${selectedTable}" không có đơn hàng nào để lập hóa đơn!`, 'error');
+                return;
+            }
+            if (given < rawTotal) {
+                showToast("Số tiền khách đưa chưa đủ để thanh toán!", 'error');
+                return;
+            }
+
+            const cashierLabel = currentPosStaff ? `${currentPosStaff.id} - ${currentPosStaff.name}` : "NV03 - Thu ngân";
+            const newInv = {
+                invId: "HD" + (invoiceData.length + 101),
+                table: selectedTable,
+                cashier: cashierLabel,
+                time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                total: rawTotal,
+                given: given,
+                change: given - rawTotal
+            };
+
+            invoiceData.unshift(newInv);
+            // Giải phóng bàn sau khi thanh toán
+            activeOrders = activeOrders.filter(o => o.table !== selectedTable);
+            document.getElementById('posCustomerGiven').value = "";
+            renderAll();
+
+            openModal(
+                `HOÁ ĐƠN THANH TOÁN QUẦY POS (${newInv.invId})`,
+                `<div class="space-y-2 border-2 border-gray-800 p-4 rounded bg-gray-50 font-mono text-xs sm:text-sm">
+                    <div class="text-center font-bold text-base border-b border-gray-400 pb-2">PHIẾU THANH TOÁN NHÀ HÀNG (UC07)</div>
+                    <div><strong>Mã hoá đơn:</strong> ${newInv.invId}</div>
+                    <div><strong>Bàn thanh toán:</strong> ${newInv.table}</div>
+                    <div><strong>NV đứng máy POS:</strong> ${newInv.cashier}</div>
+                    <div><strong>Giờ thanh toán:</strong> ${newInv.time}</div>
+                    <hr class="border-gray-400">
+                    <div class="flex justify-between font-bold text-sm"><span>TỔNG CỘNG:</span><span>${formatMoney(newInv.total)}</span></div>
+                    <div class="flex justify-between"><span>Tiền khách đưa:</span><span>${formatMoney(newInv.given)}</span></div>
+                    <div class="flex justify-between font-bold text-emerald-700"><span>Tiền thừa trả khách:</span><span>${formatMoney(newInv.change)}</span></div>
+                </div>`
+            );
+        }
+
+        function deleteInvoice(index) {
+            invoiceData.splice(index, 1);
+            renderAll();
+            showToast("Đã xoá hóa đơn.", 'info');
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 7: QUẢN TRỊ NHÂN VIÊN, THỰC ĐƠN, NGUYÊN LIỆU (UCO8 -> UCO11)
+         * =========================================================================
+         */
+        function saveStaffRecord() {
+            const id = document.getElementById('hrStaffId').value.trim().toUpperCase();
+            const name = document.getElementById('hrStaffName').value.trim();
+            const role = document.getElementById('hrStaffRole').value;
+            const shift = document.getElementById('hrStaffShift').value;
+            const startDate = document.getElementById('hrStartDate').value;
+            const hours = parseFloat(document.getElementById('hrTotalHours').value) || 0;
+            const editIdx = parseInt(document.getElementById('editStaffIdx').value);
+
+            if (!id || !name) {
+                showToast("Vui lòng nhập đầy đủ Mã nhân viên và Tên nhân viên!", 'error');
+                return;
+            }
+
+            if (editIdx >= 0) {
+                staffData[editIdx] = { ...staffData[editIdx], id, name, role, shift, startDate, hours };
+                document.getElementById('editStaffIdx').value = "-1";
+                showToast(`Đã cập nhật thông tin & giờ công của nhân viên ${name}!`, 'success');
+            } else {
+                staffData.push({ id, name, role, shift, startDate, hours, pin: "1234" });
+                showToast(`Đã thêm nhân viên mới: ${id} - ${name}!`, 'success');
+            }
+
+            document.getElementById('hrStaffId').value = "";
+            document.getElementById('hrStaffName').value = "";
+            document.getElementById('hrTotalHours').value = APP_CONFIG.TARGET_MONTHLY_HOURS;
+            renderAll();
+        }
+
+        function editStaffRecord(index) {
+            const s = staffData[index];
+            document.getElementById('editStaffIdx').value = index;
+            document.getElementById('hrStaffId').value = s.id;
+            document.getElementById('hrStaffName').value = s.name;
+            document.getElementById('hrStaffRole').value = s.role;
+            document.getElementById('hrStaffShift').value = s.shift || "Ca Sáng";
+            document.getElementById('hrStartDate').value = s.startDate || "2025-01-15";
+            document.getElementById('hrTotalHours').value = s.hours;
+            showToast(`Đang sửa thông tin nhân viên: ${s.name}`, 'info');
+        }
+
+        function deleteStaffRecord(index) {
+            const removed = staffData.splice(index, 1);
+            renderAll();
+            showToast(`Đã xoá nhân viên ${removed[0]?.name || ''}.`, 'info');
+        }
+
+        function saveMenuRecord() {
+            const code = document.getElementById('menuCodeInput').value.trim().toUpperCase();
+            const name = document.getElementById('menuNameInput').value.trim();
+            const price = parseFloat(document.getElementById('menuPriceInput').value) || 0;
+            const editIdx = parseInt(document.getElementById('editMenuIdx').value);
+
+            if (!code || !name || price <= 0) {
+                showToast("Vui lòng nhập đầy đủ Mã món, Tên món và Đơn giá!", 'error');
+                return;
+            }
+
+            if (editIdx >= 0) {
+                menuData[editIdx] = { code, name, price };
+                document.getElementById('editMenuIdx').value = "-1";
+            } else {
+                menuData.push({ code, name, price });
+            }
+            document.getElementById('menuCodeInput').value = "";
+            document.getElementById('menuNameInput').value = "";
+            document.getElementById('menuPriceInput').value = "";
+            renderAll();
+            showToast("UCO9 - Đã lưu món ăn vào thực đơn hàng ngày!", 'success');
+        }
+
+        function editMenuRecord(index) {
+            const m = menuData[index];
+            document.getElementById('editMenuIdx').value = index;
+            document.getElementById('menuCodeInput').value = m.code;
+            document.getElementById('menuNameInput').value = m.name;
+            document.getElementById('menuPriceInput').value = m.price;
+        }
+
+        function deleteMenuRecord(index) {
+            menuData.splice(index, 1);
+            renderAll();
+        }
+
+        function saveIngRecord() {
+            const code = document.getElementById('ingCodeInput').value.trim().toUpperCase();
+            const name = document.getElementById('ingNameInput').value.trim();
+            const qty = parseFloat(document.getElementById('ingQtyInput').value) || 0;
+            const editIdx = parseInt(document.getElementById('editIngIdx').value);
+
+            if (!code || !name) {
+                showToast("Vui lòng nhập Mã nguyên liệu và Tên nguyên liệu!", 'error');
+                return;
+            }
+
+            if (editIdx >= 0) {
+                ingredientData[editIdx] = { code, name, qty };
+                document.getElementById('editIngIdx').value = "-1";
+            } else {
+                ingredientData.push({ code, name, qty });
+            }
+            document.getElementById('ingCodeInput').value = "";
+            document.getElementById('ingNameInput').value = "";
+            document.getElementById('ingQtyInput').value = "";
+            renderAll();
+            showToast("UCO10 - Đã cập nhật kho nguyên liệu!", 'success');
+        }
+
+        function editIngRecord(index) {
+            const ing = ingredientData[index];
+            document.getElementById('editIngIdx').value = index;
+            document.getElementById('ingCodeInput').value = ing.code;
+            document.getElementById('ingNameInput').value = ing.name;
+            document.getElementById('ingQtyInput').value = ing.qty;
+        }
+
+        function deleteIngRecord(index) {
+            ingredientData.splice(index, 1);
+            renderAll();
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 8: RENDER TOÀN BỘ GIAO DIỆN ĐỒNG BỘ
+         * =========================================================================
+         */
+        function switchMainMode(mode) {
+            const webSection = document.getElementById('mainWebMode');
+            const drawioSection = document.getElementById('mainDrawioMode');
+            const btnWeb = document.getElementById('btnModeWeb');
+            const btnDrawio = document.getElementById('btnModeDrawio');
+
+            if (mode === 'drawio') {
+                webSection.classList.add('hidden');
+                drawioSection.classList.remove('hidden');
+                btnDrawio.className = "px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-amber-400 text-black border-2 border-white transition";
+                btnWeb.className = "px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-gray-800 text-white border-2 border-gray-500 hover:bg-gray-700 transition";
+                document.getElementById('drawioXmlTextarea').value = generateDrawioXmlContent();
+            } else {
+                drawioSection.classList.add('hidden');
+                webSection.classList.remove('hidden');
+                btnWeb.className = "px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-amber-400 text-black border-2 border-white transition";
+                btnDrawio.className = "px-3.5 py-2 rounded font-bold text-xs sm:text-sm bg-gray-800 text-white border-2 border-gray-500 hover:bg-gray-700 transition";
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('[id^="tabBtn-"]').forEach(btn => {
+                btn.classList.remove('wf-btn-primary');
+            });
+            document.getElementById('tabBtn-' + tabId).classList.add('wf-btn-primary');
+            renderAll();
+        }
+
+        function renderAll() {
+            // 1. Cập nhật thông tin nhân viên đứng máy POS trên thanh trạng thái
+            if (currentPosStaff) {
+                const sal = calculateMonthlySalary(currentPosStaff.hours);
+                document.getElementById('posActiveStaffDisplay').innerHTML =
+                    `${currentPosStaff.id} - ${currentPosStaff.name} (${currentPosStaff.role}) | Lũy kế: <span class="text-blue-800">${currentPosStaff.hours}h</span> | Lương tạm tính: <span class="text-emerald-700">${formatMoney(sal.totalPay)}</span>`;
+                document.getElementById('posCashierDisplay').value = `${currentPosStaff.id} - ${currentPosStaff.name} (${currentPosStaff.role})`;
+            }
+
+            // 2. Render Bảng Lịch sử Chấm công (Tab 1)
+            document.getElementById('shiftTableBody').innerHTML = shiftLogs.map((log, idx) => {
+                const pay = log.hours * APP_CONFIG.HOURLY_RATE;
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="font-bold">${log.staffId}</td>
+                        <td>${log.staffName}</td>
+                        <td>${log.shiftType} <span class="text-xs text-gray-500">(${log.date})</span></td>
+                        <td class="font-bold text-blue-800">${log.hours} giờ</td>
+                        <td class="font-bold text-emerald-700">${formatMoney(pay)}</td>
+                        <td class="text-center">
+                            <button onclick="editShiftLog(${idx})" class="wf-btn text-xs py-1 px-2.5 mr-1">Sửa</button>
+                            <button onclick="deleteShiftLog(${idx})" class="wf-btn text-xs py-1 px-2.5">Xoá</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 3. Render Sơ đồ bàn (UCO1) & Menu (UCO2) tại Sảnh
+            const selectedHallTable = document.getElementById('hallTableSelect').value;
+            document.getElementById('tableMapGrid').innerHTML = tableNames.map(tName => {
+                const count = activeOrders.filter(o => o.table === tName).length;
+                const isSelected = selectedHallTable === tName;
+                const bgClass = count > 0 ? 'bg-amber-200 border-amber-900' : 'bg-white border-gray-800';
+                const ringClass = isSelected ? 'ring-2 ring-blue-600' : '';
+                return `
+                    <div onclick="selectTableOnMap('${tName}')" class="cursor-pointer border-2 ${bgClass} ${ringClass} p-2.5 rounded text-center transition hover:shadow">
+                        <div class="font-bold text-sm">${tName}</div>
+                        <div class="text-xs mt-1 font-semibold ${count > 0 ? 'text-red-800' : 'text-gray-500'}">
+                            ${count > 0 ? `Đang gọi ${count} món` : 'Bàn trống'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('hallDishSelect').innerHTML = menuData.map(m =>
+                `<option value="${m.code}">${m.code} - ${m.name} (${formatMoney(m.price)})</option>`
+            ).join('');
+
+            // 4. Render Bảng Đơn hàng ở Sảnh (UCO3, UCO6)
+            document.getElementById('hallOrderTableBody').innerHTML = activeOrders.map((o, idx) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="font-bold">${o.table}</td>
+                    <td>
+                        <div class="font-semibold">${o.dishName}</div>
+                        <div class="text-xs text-gray-500">Ghi chú: ${o.note}</div>
+                    </td>
+                    <td class="font-bold">${o.qty}</td>
+                    <td class="font-bold">${formatMoney(o.price * o.qty)}</td>
+                    <td>${o.staffId}</td>
+                    <td>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded border ${
+                            o.status.includes('UCO6') ? 'bg-emerald-100 border-emerald-800 text-emerald-900' :
+                            o.status.includes('UCO5') ? 'bg-blue-100 border-blue-800 text-blue-900' :
+                            'bg-amber-100 border-amber-800 text-amber-900'
+                        }">${o.status}</span>
+                    </td>
+                    <td class="text-center space-x-1">
+                        <button onclick="hallServeDish(${idx})" class="wf-btn wf-btn-success text-xs py-1 px-2">Mang món</button>
+                        <button onclick="editOrderFromHall(${idx})" class="wf-btn text-xs py-1 px-2">Sửa</button>
+                        <button onclick="deleteOrderFromHall(${idx})" class="wf-btn text-xs py-1 px-2">Xoá</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 5. Render Bảng Chế biến ở Bếp (UCO4, UCO5)
+            const waitingCount = activeOrders.filter(o => o.status.includes('UCO4')).length;
+            document.getElementById('badgeKitchenCount').innerText = waitingCount;
+
+            document.getElementById('kitchenOrderTableBody').innerHTML = activeOrders.map((o, idx) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="font-bold">${o.table}</td>
+                    <td class="font-semibold">${o.dishName}</td>
+                    <td class="font-bold text-center">${o.qty}</td>
+                    <td class="text-xs">${o.note}</td>
+                    <td class="font-semibold text-sm">${o.status}</td>
+                    <td class="text-center">
+                        <button onclick="kitchenCompleteDish(${idx})" class="wf-btn wf-btn-primary text-xs py-1 px-3">
+                            Hoàn thành món (UCO5)
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 6. Render Quầy POS Thu ngân (UC07)
+            recalcPosCheckout();
+            document.getElementById('invoiceTableBody').innerHTML = invoiceData.map((inv, idx) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="font-bold">${inv.invId}</td>
+                    <td class="font-semibold">${inv.table}</td>
+                    <td>${inv.cashier}</td>
+                    <td>${inv.time}</td>
+                    <td class="font-bold text-emerald-700">${formatMoney(inv.total)}</td>
+                    <td class="text-center">
+                        <button onclick="deleteInvoice(${idx})" class="wf-btn text-xs py-1 px-3">Xoá</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 7. Render Bảng Nhân viên & Lương thưởng 30k/h (UCO8 - Chuẩn mẫu Hình 2)
+            let totalPayrollCost = 0;
+            document.getElementById('hrStaffTableBody').innerHTML = staffData.map((s, idx) => {
+                const sal = calculateMonthlySalary(s.hours);
+                totalPayrollCost += sal.totalPay;
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="font-bold">${s.id}</td>
+                        <td class="font-semibold">${s.name}</td>
+                        <td>${s.role} <div class="text-xs text-gray-500">${s.shift || ''}</div></td>
+                        <td class="font-bold ${s.hours > APP_CONFIG.TARGET_MONTHLY_HOURS ? 'text-blue-700' : ''}">
+                            ${s.hours} giờ
+                            ${s.hours > APP_CONFIG.TARGET_MONTHLY_HOURS ? `<div class="text-xs text-emerald-700">(Vượt +${sal.extraHours}h)</div>` : ''}
+                        </td>
+                        <td>${formatMoney(sal.baseSalary)}</td>
+                        <td class="font-bold ${sal.performanceBonus > 0 ? 'text-emerald-700' : 'text-gray-400'}">
+                            ${sal.performanceBonus > 0 ? '+ ' + formatMoney(sal.performanceBonus) : '0 đ'}
+                        </td>
+                        <td class="font-extrabold text-red-700">${formatMoney(sal.totalPay)}</td>
+                        <td class="text-center">
+                            <button onclick="editStaffRecord(${idx})" class="wf-btn text-xs py-1 px-2.5 mr-1">Sửa</button>
+                            <button onclick="deleteStaffRecord(${idx})" class="wf-btn text-xs py-1 px-2.5">Xoá</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 8. Render Thực đơn (UCO9), Nguyên liệu (UCO10) & Doanh thu (UCO11)
+            document.getElementById('adminMenuTableBody').innerHTML = menuData.map((m, idx) => `
+                <tr>
+                    <td class="font-bold">${m.code}</td>
+                    <td>${m.name}</td>
+                    <td class="font-semibold">${formatMoney(m.price)}</td>
+                    <td class="text-center">
+                        <button onclick="editMenuRecord(${idx})" class="wf-btn text-xs py-1 px-2 mr-1">Sửa</button>
+                        <button onclick="deleteMenuRecord(${idx})" class="wf-btn text-xs py-1 px-2">Xoá</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('adminIngTableBody').innerHTML = ingredientData.map((ing, idx) => `
+                <tr>
+                    <td class="font-bold">${ing.code}</td>
+                    <td>${ing.name}</td>
+                    <td class="font-bold">${ing.qty}</td>
+                    <td class="text-center">
+                        <button onclick="editIngRecord(${idx})" class="wf-btn text-xs py-1 px-2 mr-1">Sửa</button>
+                        <button onclick="deleteIngRecord(${idx})" class="wf-btn text-xs py-1 px-2">Xoá</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            const totalRevenue = invoiceData.reduce((sum, i) => sum + i.total, 0);
+            document.getElementById('statInvoiceCount').innerText = invoiceData.length;
+            document.getElementById('statTotalRevenue').innerText = formatMoney(totalRevenue);
+            document.getElementById('statTotalPayroll').innerText = formatMoney(totalPayrollCost);
+            document.getElementById('statNetBalance').innerText = formatMoney(totalRevenue - totalPayrollCost);
+        }
+
+        /**
+         * =========================================================================
+         * KHỐI 9: TRÌNH XUẤT FILE .DRAWIO (XML MXFILE CHUẨN MỞ TRỰC TIẾP TRÊN DRAW.IO)
+         * =========================================================================
+         */
+        function generateDrawioXmlContent() {
+            return `<mxfile host="app.diagrams.net" modified="2025-05-15T08:00:00.000Z" agent="RestaurantPOSGenerator" version="24.0.0" type="device">
+  <diagram id="page-wireframes" name="1. Wireframe Giao Dien POS va Tinh Luong 30k">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- KHUNG MAN HINH 1: DANG NHAP POS & CHAM CONG TINH CA 30K/H -->
+        <mxCell id="wf1_box" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="680" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_title" value="MÀN HÌNH 1: ĐĂNG NHẬP POS &amp; CHẤM CÔNG TÍNH CA (30.000Đ/1H)" style="text;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="90" y="55" width="580" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl1" value="Mã nhân viên:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="105" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in1" value="NV01" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="105" width="170" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl2" value="Tên nhân viên:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in2" value="Nguyễn Văn An" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="150" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl3" value="Ca làm việc:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="195" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in3" value="Ca Sáng (06:00 - 14:00) - 8 giờ" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="195" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_tri3" value="" style="triangle;whiteSpace=wrap;html=1;direction=south;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="580" y="201" width="28" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl4" value="Vai trò POS:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="240" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in4" value="NV phục vụ / Thu ngân / Bếp" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="240" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_tri4" value="" style="triangle;whiteSpace=wrap;html=1;direction=south;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="580" y="246" width="28" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl5" value="Ngày chấm công:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="285" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in5" value="15/05/2025" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="285" width="170" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_lbl6" value="Giờ công &amp; Lương ca:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="330" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_in6" value="8 giờ x 30.000đ/h = 240.000 VNĐ" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="330" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_btn_save" value="Lưu / Kết thúc công" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="310" y="380" width="150" height="40" as="geometry" />
+        </mxCell>
+        <!-- Bang du lieu phia duoi -->
+        <mxCell id="wf1_th1" value="Mã nhân viên" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="440" width="160" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_th2" value="Tên nhân viên &amp; Giờ công" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="240" y="440" width="290" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_th3" value="Thao tác" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="530" y="440" width="150" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_td1" value="NV01" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="472" width="160" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_td2" value="Nguyễn Văn An - 8h (240.000đ)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="472" width="290" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_td3" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="472" width="150" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_edit1" value="Sửa" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="542" y="478" width="55" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf1_del1" value="Xoá" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="478" width="55" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- KHUNG MAN HINH 2: UCO8 QUAN LY NHAN VIEN & THUONG HIEU SUAT -->
+        <mxCell id="wf2_box" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="760" y="40" width="700" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_title" value="MÀN HÌNH 2: UCO8 - QL NHÂN VIÊN &amp; THƯỞNG HIỆU SUẤT (&gt;160H)" style="text;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="810" y="55" width="600" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_lbl1" value="Mã nhân viên:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="840" y="105" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_in1" value="NV03" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="105" width="170" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_lbl2" value="Tên nhân viên:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="840" y="150" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_in2" value="Lê Hoàng Cường" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="150" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_lbl3" value="Bộ phận:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="840" y="195" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_in3" value="Thu ngân (Quầy POS)" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="195" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_lbl4" value="Tổng giờ tháng:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="840" y="240" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_in4" value="180 giờ (Vượt 20h -&gt; +Thưởng hiệu suất)" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="240" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_lbl5" value="Tổng thực nhận:" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="840" y="285" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_in5" value="5.400.000đ + 600.000đ Thưởng = 6.000.000 VNĐ" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1.5;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="980" y="285" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_btn_save" value="Lưu" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="345" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_th1" value="Mã nhân viên" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="800" y="415" width="140" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_th2" value="Tên nhân viên &amp; Tổng lương thưởng" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="940" y="415" width="330" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_th3" value="Thao tác" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="415" width="150" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_td1" value="NV03" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="447" width="140" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_td2" value="Lê Hoàng Cường - 180h - 6.000.000đ" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="447" width="330" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_td3" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="447" width="150" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_edit1" value="Sửa" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1282" y="453" width="55" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="wf2_del1" value="Xoá" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="453" width="55" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`;
+        }
+
+        function downloadDrawioFile() {
+            const xml = generateDrawioXmlContent();
+            const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'He_Thong_POS_Nha_Hang_Drawio.drawio';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Đã tải file He_Thong_POS_Nha_Hang_Drawio.drawio! Bạn có thể mở trực tiếp trên app.diagrams.net.", 'success');
+        }
+
+        function copyDrawioXml() {
+            const textarea = document.getElementById('drawioXmlTextarea');
+            textarea.value = generateDrawioXmlContent();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Đã copy mã XML Draw.io vào bộ nhớ tạm!", 'success');
+            } catch (err) {
+                showToast("Hãy bôi đen ô mã XML và nhấn Ctrl+C.", 'info');
+            }
+        }
+
+        // Khởi tạo ngày hôm nay & render lần đầu khi tải trang
+        window.onload = function () {
+            document.getElementById('authDate').value = new Date().toISOString().slice(0, 10);
+            updateLiveShiftPreview();
+            renderAll();
+        };
+    </script>
+</body>
+</html>
